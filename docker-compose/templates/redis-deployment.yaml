@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -c
+    kompose.version: 1.36.0 (ae2a39403)
+  labels:
+    io.kompose.service: redis
+  name: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: redis
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -c
+        kompose.version: 1.36.0 (ae2a39403)
+      labels:
+        io.kompose.service: redis
+    spec:
+      containers:
+        - args:
+            - redis-server
+            - /usr/local/etc/redis/redis.conf
+          image: redis:6.2.14-alpine
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli ping | grep PONG
+            failureThreshold: 10
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 90
+          name: redis
+          volumeMounts:
+            - mountPath: /data
+              name: sentry-redis
+            - mountPath: /usr/local/etc/redis/redis.conf
+              name: redis-cm1
+              readOnly: true
+              subPath: redis.conf
+      restartPolicy: Always
+      volumes:
+        - name: sentry-redis
+          persistentVolumeClaim:
+            claimName: sentry-redis
+        - configMap:
+            items:
+              - key: redis.conf
+                path: redis.conf
+            name: redis-cm1
+          name: redis-cm1

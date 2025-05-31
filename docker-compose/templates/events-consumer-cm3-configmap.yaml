@@ -1,0 +1,11 @@
+apiVersion: v1
+data:
+  .gitignore: |
+    # Add all custom CAs in this folder
+    *
+    !.gitignore
+kind: ConfigMap
+metadata:
+  labels:
+    io.kompose.service: events-consumer
+  name: events-consumer-cm3

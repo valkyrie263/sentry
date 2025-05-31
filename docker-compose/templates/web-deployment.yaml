@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -c
+    kompose.version: 1.36.0 (ae2a39403)
+  labels:
+    io.kompose.service: web
+  name: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: web
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -c
+        kompose.version: 1.36.0 (ae2a39403)
+      labels:
+        io.kompose.service: web
+    spec:
+      containers:
+        - args:
+            - run
+            - web
+          command:
+            - /etc/sentry/entrypoint.sh
+          env:
+            - name: COMPOSE_PROFILES
+              value: feature-complete
+            - name: DEFAULT_CA_BUNDLE
+              value: /etc/ssl/certs/ca-certificates.crt
+            - name: GRPC_DEFAULT_SSL_ROOTS_FILE_PATH_ENV_VAR
+              value: /etc/ssl/certs/ca-certificates.crt
+            - name: PYTHONUSERBASE
+              value: /data/custom-packages
+            - name: REQUESTS_CA_BUNDLE
+              value: /etc/ssl/certs/ca-certificates.crt
+            - name: SENTRY_CONF
+              value: /etc/sentry
+            - name: SENTRY_EVENT_RETENTION_DAYS
+              value: "90"
+            - name: SNUBA
+              value: http://snuba-api:1218
+            - name: VROOM
+              value: http://vroom:8085
+          image: sentry-self-hosted-local
+          livenessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - 'exec 3<>/dev/tcp/127.0.0.1/9000 && echo -e "GET /_health/ HTTP/1.1\r\nhost: 127.0.0.1\r\n\r\n" >&3 && grep ok -s -m 1 <&3'
+            failureThreshold: 10
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 90
+          name: web
+          volumeMounts:
+            - mountPath: /data
+              name: sentry-data
+            - mountPath: /etc/sentry
+              name: web-cm1
+            - mountPath: /geoip
+              name: web-cm2
+              readOnly: true
+            - mountPath: /usr/local/share/ca-certificates
+              name: web-cm3
+              readOnly: true
+      restartPolicy: Always
+      volumes:
+        - name: sentry-data
+          persistentVolumeClaim:
+            claimName: sentry-data
+        - configMap:
+            name: web-cm1
+          name: web-cm1
+        - configMap:
+            name: web-cm2
+          name: web-cm2
+        - configMap:
+            name: web-cm3
+          name: web-cm3

@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -c
+    kompose.version: 1.36.0 (ae2a39403)
+  labels:
+    io.kompose.service: clickhouse
+  name: clickhouse
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: clickhouse
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -c
+        kompose.version: 1.36.0 (ae2a39403)
+      labels:
+        io.kompose.service: clickhouse
+    spec:
+      containers:
+        - env:
+            - name: MAX_MEMORY_USAGE_RATIO
+              value: "0.3"
+          image: clickhouse-self-hosted-local
+          livenessProbe:
+            exec:
+              command:
+                - http_proxy='' wget -nv -t1 --spider 'http://localhost:8123/' || exit 1
+            failureThreshold: 30
+            periodSeconds: 10
+            timeoutSeconds: 10
+          name: clickhouse
+          volumeMounts:
+            - mountPath: /var/lib/clickhouse
+              name: sentry-clickhouse
+            - mountPath: /var/log/clickhouse-server
+              name: sentry-clickhouse-log
+            - mountPath: /etc/clickhouse-server/config.d/sentry.xml
+              name: clickhouse-cm2
+              readOnly: true
+              subPath: sentry.xml
+      restartPolicy: Always
+      volumes:
+        - name: sentry-clickhouse
+          persistentVolumeClaim:
+            claimName: sentry-clickhouse
+        - name: sentry-clickhouse-log
+          persistentVolumeClaim:
+            claimName: sentry-clickhouse-log
+        - configMap:
+            items:
+              - key: config.xml
+                path: sentry.xml
+            name: clickhouse-cm2
+          name: clickhouse-cm2

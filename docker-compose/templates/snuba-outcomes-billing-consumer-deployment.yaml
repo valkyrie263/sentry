@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -c
+    kompose.version: 1.36.0 (ae2a39403)
+  labels:
+    io.kompose.service: snuba-outcomes-billing-consumer
+  name: snuba-outcomes-billing-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: snuba-outcomes-billing-consumer
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -c
+        kompose.version: 1.36.0 (ae2a39403)
+      labels:
+        io.kompose.service: snuba-outcomes-billing-consumer
+    spec:
+      containers:
+        - args:
+            - rust-consumer
+            - --storage
+            - outcomes_raw
+            - --consumer-group
+            - snuba-consumers
+            - --auto-offset-reset=earliest
+            - --max-batch-time-ms
+            - "750"
+            - --no-strict-offset-reset
+            - --raw-events-topic
+            - outcomes-billing
+          env:
+            - name: CLICKHOUSE_HOST
+              value: clickhouse
+            - name: DEFAULT_BROKERS
+              value: kafka:9092
+            - name: REDIS_HOST
+              value: redis
+            - name: SENTRY_EVENT_RETENTION_DAYS
+              value: "90"
+            - name: SNUBA_SETTINGS
+              value: self_hosted
+            - name: UWSGI_DISABLE_LOGGING
+              value: "true"
+            - name: UWSGI_MAX_REQUESTS
+              value: "10000"
+          image: getsentry/snuba:nightly
+          name: snuba-outcomes-billing-consumer
+      restartPolicy: Always

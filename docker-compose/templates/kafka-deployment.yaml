@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -c
+    kompose.version: 1.36.0 (ae2a39403)
+  labels:
+    io.kompose.service: kafka
+  name: kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: kafka
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -c
+        kompose.version: 1.36.0 (ae2a39403)
+      labels:
+        io.kompose.service: kafka
+    spec:
+      containers:
+        - env:
+            - name: CLUSTER_ID
+              value: MkU3OEVBNTcwNTJENDM2Qk
+            - name: CONFLUENT_SUPPORT_METRICS_ENABLE
+              value: "false"
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: PLAINTEXT://127.0.0.1:29092,INTERNAL://kafka:9093,EXTERNAL://kafka:9092
+            - name: KAFKA_CONTROLLER_LISTENER_NAMES
+              value: CONTROLLER
+            - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+              value: 1001@127.0.0.1:29093
+            - name: KAFKA_INTER_BROKER_LISTENER_NAME
+              value: PLAINTEXT
+            - name: KAFKA_LISTENERS
+              value: PLAINTEXT://0.0.0.0:29092,INTERNAL://0.0.0.0:9093,EXTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+            - name: KAFKA_LOG4J_LOGGERS
+              value: kafka.cluster=WARN,kafka.controller=WARN,kafka.coordinator=WARN,kafka.log=WARN,kafka.server=WARN,state.change.logger=WARN
+            - name: KAFKA_LOG4J_ROOT_LOGLEVEL
+              value: WARN
+            - name: KAFKA_LOG_RETENTION_HOURS
+              value: "24"
+            - name: KAFKA_MAX_REQUEST_SIZE
+              value: "50000000"
+            - name: KAFKA_MESSAGE_MAX_BYTES
+              value: "50000000"
+            - name: KAFKA_NODE_ID
+              value: "1001"
+            - name: KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS
+              value: "1"
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_PROCESS_ROLES
+              value: broker,controller
+            - name: KAFKA_TOOLS_LOG4J_LOGLEVEL
+              value: WARN
+          image: confluentinc/cp-kafka:7.6.1
+          livenessProbe:
+            exec:
+              command:
+                - nc -z localhost 9092
+            failureThreshold: 30
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 10
+          name: kafka
+          volumeMounts:
+            - mountPath: /var/lib/kafka/data
+              name: sentry-kafka
+            - mountPath: /var/lib/kafka/log
+              name: sentry-kafka-log
+            - mountPath: /etc/kafka/secrets
+              name: sentry-secrets
+      restartPolicy: Always
+      volumes:
+        - name: sentry-kafka
+          persistentVolumeClaim:
+            claimName: sentry-kafka
+        - name: sentry-kafka-log
+          persistentVolumeClaim:
+            claimName: sentry-kafka-log
+        - name: sentry-secrets
+          persistentVolumeClaim:
+            claimName: sentry-secrets
